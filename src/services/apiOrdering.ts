@@ -1,6 +1,7 @@
 // src/services/apiOrdering.ts
 import { supabase } from '@/lib/supabase';
 import type { OrderingMenuData } from '@/types';
+import type { CartItem } from '@/store/cartStore';
 
 // Hàm này gọi RPC trên Supabase để tạo một phiên gọi món mới cho bàn
 export async function createOrderingSession(tableId: string): Promise<string | null> {
@@ -35,4 +36,42 @@ export async function getMenuByTable(tableId: string): Promise<OrderingMenuData 
   }
 
   return data;
+}
+
+export async function submitOrder({
+    tableId,
+    restaurantId,
+    sessionId,
+    cart,
+}: {
+    tableId: string;
+    restaurantId: string;
+    sessionId: string;
+    cart: CartItem[];
+}) {
+    if (!tableId || !restaurantId || !sessionId || cart.length === 0) {
+        throw new Error('Thiếu thông tin để gửi đơn hàng.');
+    }
+
+    // Chuẩn bị dữ liệu p_order_items theo đúng định dạng mà hàm RPC yêu cầu
+    const orderItemsPayload = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+    }));
+
+    const { data, error } = await supabase.rpc('submit_order_for_session', {
+        p_table_id: tableId,
+        p_restaurant_id: restaurantId,
+        p_session_id: sessionId,
+        p_order_items: orderItemsPayload,
+    });
+
+    if (error) {
+        console.error("Lỗi khi gửi đơn hàng:", error);
+        throw new Error("Gửi đơn hàng thất bại. Vui lòng thử lại.");
+    }
+
+    return data;
 }

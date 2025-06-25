@@ -1,10 +1,6 @@
 // src/store/cartStore.ts
 import { create } from 'zustand';
-// XÓA DÒNG IMPORT CŨ
-// import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// XÓA DÒNG IMPORT CŨ
-// import { Platform } from 'react-native';
 import type { MenuItem } from '@/types';
 
 export interface CartItem extends MenuItem {
@@ -20,13 +16,12 @@ interface CartState {
   increaseQuantity: (itemId: string) => void;
   decreaseQuantity: (itemId: string) => void;
   clearCart: () => void;
-  totalItems: () => number;
   hydrate: () => Promise<void>;
 }
 
 const CART_STORAGE_KEY = 'orderflow-cart-storage';
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>((set) => ({
       items: [],
       restaurantId: null,
       setRestaurantId: (id) => set({ restaurantId: id }),
@@ -61,7 +56,6 @@ export const useCartStore = create<CartState>((set, get) => ({
             .filter((i) => i.quantity > 0),
         })),
       clearCart: () => set({ items: [] }),
-      totalItems: () => get().items.reduce((total, item) => total + item.quantity, 0),
       hydrate: async () => {
         try {
             const storedState = await AsyncStorage.getItem(CART_STORAGE_KEY);
@@ -74,7 +68,6 @@ export const useCartStore = create<CartState>((set, get) => ({
     },
 }));
 
-// Logic lưu trữ thủ công
 useCartStore.subscribe(async (state) => {
     try {
         const stateToPersist = JSON.stringify({

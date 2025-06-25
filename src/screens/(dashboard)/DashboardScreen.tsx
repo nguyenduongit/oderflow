@@ -2,12 +2,16 @@
 import React from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, Alert, View, Text, ActivityIndicator, useWindowDimensions, SafeAreaView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
 import { useRestaurant } from '@/hooks/useRestaurant';
 import { useSubscription } from '@/hooks/useSubscription';
 import CreateRestaurantForm from '@/features/restaurants/CreateRestaurantForm';
 import { getTablesWithStatus } from '@/services/apiOrders';
 import { createTable } from '@/services/apiTables';
 import type { TableWithStatus } from '@/types';
+import { DashboardStackParamList } from '@/navigation/DashboardStackNavigator';
 import Card from '@/components/Card';
 import Button from '@/components/Button';
 
@@ -16,18 +20,34 @@ type UncreatedTable = {
     id?: undefined;
     status: 'uncreated';
     table_number: number;
+    isCreated: false;
 };
-type GridItem = TableWithStatus | UncreatedTable;
+type CreatedTable = TableWithStatus & { isCreated: true };
+type GridItem = CreatedTable | UncreatedTable;
 
 const SPACING = 10;
 
 // --- Components ---
 
-// THAY ĐỔI Ở ĐÂY: Thêm prop `style` để nhận kích thước từ FlatList
-const TableCard = ({ item, onAdd, isAdding, style }: { item: GridItem, onAdd: (tableNumber: number) => void, isAdding: boolean, style: any }) => {
-    const isCreated = !!item.id;
+type DashboardNavigationProp = StackNavigationProp<DashboardStackParamList, 'TableLayoutList'>;
 
-    if (!isCreated) {
+const TableCard = ({ item, onAdd, isAdding, style }: {
+    item: GridItem;
+    onAdd: (tableNumber: number) => void;
+    isAdding: boolean;
+    style: any;
+}) => {
+    const navigation = useNavigation<DashboardNavigationProp>();
+
+    const handlePress = () => {
+        // Chỉ bàn đã tạo mới có thể điều hướng
+        if (item.isCreated) {
+            navigation.navigate('OrderDetails', { tableId: item.id, tableNumber: item.table_number });
+        }
+    };
+
+    // Bàn chưa được tạo trong DB
+    if (!item.isCreated) {
         return (
             <View style={style}>
                 <Card style={[styles.cardBase, styles.cardUncreated]}>
@@ -44,12 +64,13 @@ const TableCard = ({ item, onAdd, isAdding, style }: { item: GridItem, onAdd: (t
         );
     }
 
+    // Bàn đã được tạo
     const isOccupied = item.status === 'occupied';
     const cardStyle = isOccupied ? styles.cardOccupied : styles.cardVacant;
     const textStyle = isOccupied ? styles.textOccupied : styles.textVacant;
 
     return (
-        <TouchableOpacity style={style}>
+        <TouchableOpacity style={style} onPress={handlePress}>
             <Card style={[styles.cardBase, cardStyle]}>
                 <Text style={[styles.tableNumber, textStyle]}>Bàn {item.table_number}</Text>
                 <Text style={[styles.statusText, textStyle]}>
@@ -69,16 +90,10 @@ export default function DashboardScreen() {
     const isLandscape = width > height;
     const numColumns = isLandscape ? 8 : 4;
 
-    // --- THAY ĐỔI Ở ĐÂY: Tính toán kích thước ô một cách chính xác ---
-    // Tổng padding ngang của container (10 bên trái, 10 bên phải)
-    const totalHorizontalPadding = SPACING * 2;
-    // Tổng khoảng cách ngang giữa các ô
-    const totalGapWidth = SPACING * (numColumns - 1);
-    // Chiều rộng còn lại cho các ô
-    const availableWidth = width - totalHorizontalPadding - totalGapWidth;
-    // Kích thước của mỗi ô vuông
+    const totalHorizontalPadding = SPACING;
+    const availableWidth = width - totalHorizontalPadding * 2;
     const itemSize = availableWidth / numColumns;
-    // ----------------------------------------------------------------
+
 
     const { data: tables, isLoading: isLoadingTables } = useQuery({
         queryKey: ['tables-status', restaurant?.id],
@@ -124,48 +139,38 @@ export default function DashboardScreen() {
                 <FlatList
                     data={allPossibleTables}
                     key={numColumns}
-                    renderItem={({ item, index }) => (
+                    renderItem={({ item }) => (
                         <TableCard
                             item={item}
                             onAdd={addTable}
                             isAdding={isAdding}
-                            // THAY ĐỔI Ở ĐÂY: Truyền style đã tính toán vào
                             style={{
                                 width: itemSize,
                                 height: itemSize,
-                                // Thêm margin để tạo gap, trừ ô đầu tiên mỗi hàng
-                                marginLeft: (index % numColumns === 0) ? 0 : SPACING,
-                                marginBottom: SPACING,
+                                padding: SPACING / 2
                             }}
                         />
                     )}
                     keyExtractor={(item) => `table-${item.table_number}`}
                     numColumns={numColumns}
-                    // THAY ĐỔI Ở ĐÂY: Style cho container của FlatList
-                    contentContainerStyle={styles.gridContainer}
+                    contentContainerStyle={{ padding: SPACING / 2 }}
                 />
              )}
         </SafeAreaView>
     );
 }
 
-// --- Stylesheet ---
 const styles = StyleSheet.create({
+    safeArea: { flex: 1 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' },
     container: { flex: 1, backgroundColor: '#F9FAFB' },
-    // THAY ĐỔI Ở ĐÂY: Style cho container của FlatList
-    gridContainer: {
-        paddingHorizontal: SPACING,
-        paddingTop: SPACING,
-    },
-    // Bỏ cardContainer, vì style đã được tính toán và truyền trực tiếp
     cardBase: {
         width: '100%',
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 8,
-        borderRadius: 10,
+        borderRadius: 16,
     },
     cardUncreated: {
         backgroundColor: '#F3F4F6',
@@ -180,18 +185,18 @@ const styles = StyleSheet.create({
         backgroundColor: '#FEFCE8',
     },
     tableNumber: {
-        fontSize: 16, // Có thể điều chỉnh lại size chữ cho vừa ô nhỏ
+        fontSize: 18,
         fontWeight: 'bold',
     },
     statusText: {
-        fontSize: 12, // Có thể điều chỉnh lại size chữ
+        fontSize: 13,
         marginTop: 4,
         fontWeight: '500'
     },
     tableNumberUncreated: {
         color: '#6B7280',
         marginBottom: 8,
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
     },
     textVacant: {

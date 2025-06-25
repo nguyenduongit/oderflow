@@ -68,3 +68,23 @@ export interface OrderingMenuData {
   };
   menu: MenuCategoryWithItems[];
 }
+
+export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'payment_requested' | 'paid' | 'cancelled';
+export type OrderItemStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'out_of_stock' | 'cancelled';
+
+export interface OrderItem {
+    id: string;
+    quantity: number;
+    unit_price: number;
+    item_name: string;
+    batch_number: number;
+    status: OrderItemStatus;
+}
+
+export interface OrderDetail {
+    id: string;
+    created_at: string;
+    status: OrderStatus;
+    total_amount: number;
+    order_items: OrderItem[];
+}
