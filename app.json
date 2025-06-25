@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "OrderFlowe",
-    "slug": "OrderFlowe",
+    "name": "OrderFlow",
+    "slug": "OrderFlow",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "orderflowe",
+    "scheme": "orderflow",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -20,23 +20,9 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "pwa",
       "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true
     }
+  
   }
 }
